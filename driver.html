@@ -8,6 +8,8 @@
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 420px; margin: auto; }
     select, button { width: 100%; padding: 14px; margin: 8px 0; font-size: 16px; }
     #status { margin-top: 12px; font-weight: bold; }
+    .row { display: flex; gap: 8px; }
+    .row button { flex: 1; }
   </style>
 </head>
 <body>
@@ -38,8 +40,16 @@
 
   <h3>Passengers</h3>
   <p id="count">0 / 40 seats</p>
-  <button id="plus">+1 passenger</button>
-  <button id="minus">−1</button>
+  <div class="row">
+    <button class="add" data-n="1">+1</button>
+    <button class="add" data-n="2">+2</button>
+    <button class="add" data-n="5">+5</button>
+    <button class="add" data-n="10">+10</button>
+  </div>
+  <div class="row">
+    <button class="add" data-n="-1">−1</button>
+    <button class="add" data-n="-5">−5</button>
+  </div>
   <button id="reset">Reset (bus emptied)</button>
   <p id="status">Not sharing</p>
 
@@ -53,7 +63,7 @@
 
     let watchId = null;
     let lastPos = null;     // remembers the latest GPS reading
-    let heartbeat = null;   // NEW: timer for the 30-second check-in
+    let heartbeat = null;   // timer for the 30-second check-in
     const statusText = document.getElementById("status");
     const value = (id) => document.getElementById(id).value;
 
@@ -70,8 +80,10 @@
       sendUpdate();
     }
 
-    document.getElementById("plus").onclick = () => changeCount(1);
-    document.getElementById("minus").onclick = () => changeCount(-1);
+    // Every quick button (+1, +2, +5, +10, -1, -5) reads its number from data-n
+    document.querySelectorAll(".add").forEach((btn) => {
+      btn.onclick = () => changeCount(Number(btn.dataset.n));
+    });
     document.getElementById("reset").onclick = () => changeCount(-passengers);
 
     // Sends the current bus info to Firebase
@@ -96,15 +108,15 @@
         (err) => { statusText.textContent = "Location error: " + err.message; },
         { enableHighAccuracy: true }
       );
-      clearInterval(heartbeat);                    // NEW
-      heartbeat = setInterval(sendUpdate, 30000);  // NEW: check in every 30s, even when parked
+      clearInterval(heartbeat);
+      heartbeat = setInterval(sendUpdate, 30000);  // check in every 30s, even when parked
     };
 
     document.getElementById("route").onchange = sendUpdate;
     document.getElementById("direction").onchange = sendUpdate;
 
     document.getElementById("stop").onclick = () => {
-      clearInterval(heartbeat);   // NEW: stop checking in
+      clearInterval(heartbeat);
       navigator.geolocation.clearWatch(watchId);
       watchId = null;
       remove(ref(db, "buses/" + value("bus")));

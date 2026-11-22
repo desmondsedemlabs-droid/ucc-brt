@@ -53,6 +53,9 @@
       const hall = ROUTES[bus.route]?.name ?? bus.route;
       return bus.direction === "to_swlt" ? hall + " → SWLT" : "SWLT → " + hall;
     }
+    function busName(id) {
+      return id.replace("bus", "Bus ");   // "bus1" → "Bus 1"
+    }
 
     const map = L.map("map").setView([5.1095, -1.3005], 15);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -80,7 +83,7 @@
       for (const id in active) {
         const bus = active[id];
         const color = ROUTES[bus.route]?.color ?? "#555";
-        const text = label(bus) + " · " + countText(bus.passengers ?? 0);
+        const text = busName(id) + ": " + label(bus) + " · " + countText(bus.passengers ?? 0);
         if (!markers[id]) {
           markers[id] = L.circleMarker([bus.lat, bus.lng], {
             radius: 10, color: "white", weight: 2, fillColor: color, fillOpacity: 1
@@ -112,7 +115,7 @@
           const color = ROUTES[bus.route]?.color ?? "#555";
           const dist = me ? " · " + Math.round(map.distance(me, [bus.lat, bus.lng])) + " m from you" : "";
           html += `<div class="bus" data-id="${id}" style="border-color:${color}">
-                     <b>${label(bus)}</b><br><small>${countText(bus.passengers ?? 0)}${dist}</small>
+                     <b>${busName(id)}: ${label(bus)}</b><br><small>${countText(bus.passengers ?? 0)}${dist}</small>
                    </div>`;
         }
         html += `</div>`;
