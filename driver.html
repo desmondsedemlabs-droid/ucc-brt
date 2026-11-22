@@ -3,55 +3,98 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UCC - BRT</title>
+  <title>University of Cape Coast Bus Rapid Transit (BRT) – Driver</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 420px; margin: auto; }
-    select, button { width: 100%; padding: 14px; margin: 8px 0; font-size: 16px; }
-    #status { margin-top: 12px; font-weight: bold; }
+    :root { --red: #c8102e; --blue: #1f3c88; --yellow: #f6c315; --bg: #f4f6fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: #222; }
+    header { background: var(--red); color: white; padding: 12px 14px; border-bottom: 5px solid var(--yellow);
+             display: flex; align-items: center; justify-content: center; gap: 12px; text-align: center; }
+    .wave { height: 16px; background-color: #ffffff;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='16'%3E%3Cpath d='M0 8 Q10 0 20 8 T40 8' fill='none' stroke='%231f3c88' stroke-width='4'/%3E%3C/svg%3E");
+            background-repeat: repeat-x; background-position: center; }
+
+    header h1 { margin: 0; font-size: 19px; }
+    header p { margin: 6px 0 0; font-size: 13px; color: var(--yellow); font-weight: bold; }
+    main { max-width: 440px; margin: auto; padding: 14px; }
+    .card { background: white; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .card h3 { margin: 0 0 10px; font-size: 15px; color: var(--blue); border-left: 4px solid var(--yellow); padding-left: 8px; }
+    label { display: block; font-size: 13px; color: #555; margin-top: 8px; }
+    select { width: 100%; padding: 12px; margin: 4px 0; font-size: 16px; border: 1px solid #ccc;
+             border-radius: 8px; background: white; }
+    button { width: 100%; padding: 14px; margin: 6px 0; font-size: 16px; font-weight: bold;
+             border: none; border-radius: 8px; cursor: pointer; }
+    button:active { transform: scale(0.97); }
+    #start { background: var(--blue); color: white; }
+    #stop { background: var(--red); color: white; }
     .row { display: flex; gap: 8px; }
     .row button { flex: 1; }
+    .add { background: #e8edf8; color: var(--blue); border: 1px solid #9fb0dc; }
+    .add[data-n^="-"] { background: #fdecee; color: var(--red); border-color: #f0a3ad; }
+    #reset { background: white; color: #555; border: 1px solid #bbb; }
+    #count { font-size: 26px; font-weight: bold; text-align: center; margin: 6px 0 10px; color: var(--blue);
+             background: #fff8dc; border-radius: 8px; padding: 8px; }
+    #status { text-align: center; font-weight: bold; padding: 10px; border-radius: 8px;
+              background: #eee; color: #555; margin: 0; }
   </style>
 </head>
 <body>
-  <h2>UCC BRT</h2>
+  <header>
+    <div>
+      <h1>University of Cape Coast<br>Bus Rapid Transit (BRT)</h1>
+      <p>Driver &amp; ticket collector panel</p>
+    </div>
+  </header>
+  <div class="wave"></div>
 
-  <label>Bus</label>
-  <select id="bus">
-    <option value="bus1">Bus 1</option>
-    <option value="bus2">Bus 2</option>
-    <option value="bus3">Bus 3</option>
-  </select>
+  <main>
+    <div class="card">
+      <h3>Bus setup</h3>
+      <label>Bus</label>
+      <select id="bus">
+        <option value="bus1">Bus 1</option>
+        <option value="bus2">Bus 2</option>
+        <option value="bus3">Bus 3</option>
+      </select>
 
-  <label>Route</label>
-  <select id="route">
-    <option value="src">SRC Hall</option>
-    <option value="valco">Valco Hall</option>
-    <option value="oldsite">Old Site</option>
-  </select>
+      <label>Route</label>
+      <select id="route">
+        <option value="src">SRC Hall</option>
+        <option value="valco">Valco Hall</option>
+        <option value="oldsite">Old Site</option>
+      </select>
 
-  <label>Direction</label>
-  <select id="direction">
-    <option value="to_swlt">To SWLT</option>
-    <option value="to_hall">Back to hall</option>
-  </select>
+      <label>Direction</label>
+      <select id="direction">
+        <option value="to_swlt">To SWLT</option>
+        <option value="to_hall">Back to hall</option>
+      </select>
+    </div>
 
-  <button id="start">Start sharing location</button>
-  <button id="stop">Stop</button>
+    <div class="card">
+      <h3>Location sharing</h3>
+      <button id="start">▶ Start sharing location</button>
+      <button id="stop">■ Stop</button>
+      <p id="status">Not sharing</p>
+    </div>
 
-  <h3>Passengers</h3>
-  <p id="count">0 / 40 seats</p>
-  <div class="row">
-    <button class="add" data-n="1">+1</button>
-    <button class="add" data-n="2">+2</button>
-    <button class="add" data-n="5">+5</button>
-    <button class="add" data-n="10">+10</button>
-  </div>
-  <div class="row">
-    <button class="add" data-n="-1">−1</button>
-    <button class="add" data-n="-5">−5</button>
-  </div>
-  <button id="reset">Reset (bus emptied)</button>
-  <p id="status">Not sharing</p>
+    <div class="card">
+      <h3>Passengers</h3>
+      <p id="count">0 / 40 seats</p>
+      <div class="row">
+        <button class="add" data-n="1">+1</button>
+        <button class="add" data-n="2">+2</button>
+        <button class="add" data-n="5">+5</button>
+        <button class="add" data-n="10">+10</button>
+      </div>
+      <div class="row">
+        <button class="add" data-n="-1">−1</button>
+        <button class="add" data-n="-5">−5</button>
+      </div>
+      <button id="reset">Reset (bus emptied)</button>
+    </div>
+  </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -63,7 +106,7 @@
 
     let watchId = null;
     let lastPos = null;     // remembers the latest GPS reading
-    let heartbeat = null;   // timer for the 30-second check-in
+    let heartbeat = null;   // NEW: timer for the 30-second check-in
     const statusText = document.getElementById("status");
     const value = (id) => document.getElementById(id).value;
 
@@ -108,15 +151,15 @@
         (err) => { statusText.textContent = "Location error: " + err.message; },
         { enableHighAccuracy: true }
       );
-      clearInterval(heartbeat);
-      heartbeat = setInterval(sendUpdate, 30000);  // check in every 30s, even when parked
+      clearInterval(heartbeat);                    // NEW
+      heartbeat = setInterval(sendUpdate, 30000);  // NEW: check in every 30s, even when parked
     };
 
     document.getElementById("route").onchange = sendUpdate;
     document.getElementById("direction").onchange = sendUpdate;
 
     document.getElementById("stop").onclick = () => {
-      clearInterval(heartbeat);
+      clearInterval(heartbeat);   // NEW: stop checking in
       navigator.geolocation.clearWatch(watchId);
       watchId = null;
       remove(ref(db, "buses/" + value("bus")));
