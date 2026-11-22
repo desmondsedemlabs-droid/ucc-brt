@@ -7,14 +7,27 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     body { margin: 0; font-family: Arial, sans-serif; }
-    header { padding: 10px 14px; background: #1b5e20; color: white; }
-    header h2 { margin: 0; font-size: 18px; }
-    #map { height: calc(100vh - 42px); }
+    header { padding: 8px 12px; background: #1b5e20; color: white;
+             display: flex; justify-content: space-between; align-items: center; }
+    header h2 { margin: 0; font-size: 17px; }
+    #findMe { background: white; color: #1b5e20; border: none; padding: 7px 10px;
+              border-radius: 6px; font-weight: bold; }
+    #map { height: 55vh; }
+    #list { height: calc(45vh - 42px); overflow-y: auto; padding: 6px 12px; box-sizing: border-box; }
+    .group h3 { margin: 10px 0 4px; font-size: 15px; }
+    .bus { padding: 10px; margin: 4px 0; border-left: 6px solid; background: #f4f4f4;
+           border-radius: 4px; cursor: pointer; }
+    .bus small { color: #555; }
+    .empty { color: #888; font-size: 14px; margin: 4px 0; }
   </style>
 </head>
 <body>
-  <header><h2>UCC BRT – Live Buses</h2></header>
+  <header>
+    <h2>UCC BRT – Live Buses</h2>
+    <button id="findMe">📍 Find me</button>
+  </header>
   <div id="map"></div>
+  <div id="list"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module">
@@ -25,47 +38,49 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Name and color for each route
     const ROUTES = {
-      src:     { name: "SRC Hall",   color: "#d32f2f" },  // red
-      valco:   { name: "Valco Hall", color: "#1976d2" },  // blue
-      oldsite: { name: "Old Site",   color: "#388e3c" }   // green
+      src:     { name: "SRC Hall",   color: "#d32f2f" },
+      valco:   { name: "Valco Hall", color: "#1976d2" },
+      oldsite: { name: "Old Site",   color: "#388e3c" }
     };
+    const SEATS = 40;
+    const STALE_MS = 2 * 60 * 1000;  // hide buses silent for 2 minutes
 
-    // Map centered on campus, using OpenStreetMap (free)
-    const map = L.map("map").setView([5.1095, -1.3005], 15);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap"
-    }).addTo(map);
-
-    const markers = {};  // one marker per bus
-        const SEATS = 40;
     function countText(n) {
       return n <= SEATS ? n + " / " + SEATS + " seats" : "Seats full, " + (n - SEATS) + " standing";
     }
-
-    // Builds the label, e.g. "SRC Hall → SWLT"
     function label(bus) {
       const hall = ROUTES[bus.route]?.name ?? bus.route;
       return bus.direction === "to_swlt" ? hall + " → SWLT" : "SWLT → " + hall;
     }
 
-    // Runs every time anything under "buses" changes in Firebase
-    onValue(ref(db, "buses"), (snapshot) => {
-      const buses = snapshot.val() || {};
+    const map = L.map("map").setView([5.1095, -1.3005], 15);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
 
-      // Remove buses that stopped sharing
-      for (const id in markers) {
-        if (!buses[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+    const listEl = document.getElementById("list");
+    const markers = {};
+    let latest = {};      // all bus data from Firebase
+    let me = null;        // student's position
+    let meMarker = null;
+
+    function render() {
+      // Keep only buses that checked in recently
+      const now = Date.now();
+      const active = {};
+      for (const id in latest) {
+        if (now - (latest[id].updated || 0) < STALE_MS) active[id] = latest[id];
       }
 
-      // Add new buses, or move existing ones
-      for (const id in buses) {
-        const bus = buses[id];
+      // Update map markers
+      for (const id in markers) {
+        if (!active[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+      }
+      for (const id in active) {
+        const bus = active[id];
         const color = ROUTES[bus.route]?.color ?? "#555";
         const text = label(bus) + " · " + countText(bus.passengers ?? 0);
-
         if (!markers[id]) {
           markers[id] = L.circleMarker([bus.lat, bus.lng], {
             radius: 10, color: "white", weight: 2, fillColor: color, fillOpacity: 1
@@ -76,7 +91,69 @@
           markers[id].setTooltipContent(text);
         }
       }
+
+      // Build the list, grouped by where buses are heading
+      const groups = { "SWLT": [], "SRC Hall": [], "Valco Hall": [], "Old Site": [] };
+      for (const id in active) {
+        const bus = active[id];
+        const dest = bus.direction === "to_swlt" ? "SWLT" : (ROUTES[bus.route]?.name ?? bus.route);
+        (groups[dest] ??= []).push({ id, bus });
+      }
+
+      let html = "";
+      for (const dest in groups) {
+        const items = groups[dest];
+        if (me) {  // closest bus first
+          items.sort((a, b) => map.distance(me, [a.bus.lat, a.bus.lng]) - map.distance(me, [b.bus.lat, b.bus.lng]));
+        }
+        html += `<div class="group"><h3>To ${dest}</h3>`;
+        if (items.length === 0) html += `<p class="empty">No bus heading here right now</p>`;
+        for (const { id, bus } of items) {
+          const color = ROUTES[bus.route]?.color ?? "#555";
+          const dist = me ? " · " + Math.round(map.distance(me, [bus.lat, bus.lng])) + " m from you" : "";
+          html += `<div class="bus" data-id="${id}" style="border-color:${color}">
+                     <b>${label(bus)}</b><br><small>${countText(bus.passengers ?? 0)}${dist}</small>
+                   </div>`;
+        }
+        html += `</div>`;
+      }
+      listEl.innerHTML = html;
+
+      // Tap a bus in the list: map flies to it
+      listEl.querySelectorAll(".bus").forEach((el) => {
+        el.onclick = () => {
+          const bus = active[el.dataset.id];
+          map.flyTo([bus.lat, bus.lng], 17);
+        };
+      });
+    }
+
+    // Live updates from Firebase
+    onValue(ref(db, "buses"), (snapshot) => {
+      latest = snapshot.val() || {};
+      render();
     });
+    setInterval(render, 30000);  // recheck for silent buses
+
+    // "Find me" button
+    document.getElementById("findMe").onclick = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          me = [pos.coords.latitude, pos.coords.longitude];
+          if (!meMarker) {
+            meMarker = L.circleMarker(me, {
+              radius: 8, color: "white", weight: 3, fillColor: "#2962ff", fillOpacity: 1
+            }).addTo(map).bindTooltip("You");
+          } else {
+            meMarker.setLatLng(me);
+          }
+          map.flyTo(me, 16);
+          render();
+        },
+        () => { document.getElementById("findMe").textContent = "Location off"; },
+        { enableHighAccuracy: true }
+      );
+    };
   </script>
 </body>
 </html>

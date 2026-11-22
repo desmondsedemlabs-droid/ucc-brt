@@ -35,76 +35,81 @@
 
   <button id="start">Start sharing location</button>
   <button id="stop">Stop</button>
+
   <h3>Passengers</h3>
-<p id="count">0 / 40 seats</p>
-<button id="plus">+1 passenger</button>
-<button id="minus">−1</button>
-<button id="reset">Reset (bus emptied)</button>
+  <p id="count">0 / 40 seats</p>
+  <button id="plus">+1 passenger</button>
+  <button id="minus">−1</button>
+  <button id="reset">Reset (bus emptied)</button>
   <p id="status">Not sharing</p>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import { firebaseConfig } from "./config.js";
+    import { getDatabase, ref, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+    import { firebaseConfig } from "./config.js";
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-let watchId = null;
-let lastPos = null;   // remembers the latest GPS reading
-const statusText = document.getElementById("status");
-const value = (id) => document.getElementById(id).value;
-let passengers = 0;
-const SEATS = 40, STANDING = 45;
+    let watchId = null;
+    let lastPos = null;     // remembers the latest GPS reading
+    let heartbeat = null;   // NEW: timer for the 30-second check-in
+    const statusText = document.getElementById("status");
+    const value = (id) => document.getElementById(id).value;
 
-function countText(n) {
-  return n <= SEATS ? n + " / " + SEATS + " seats" : "Seats full, " + (n - SEATS) + " standing";
-}
+    let passengers = 0;
+    const SEATS = 40, STANDING = 45;
 
-function changeCount(change) {
-  passengers = Math.max(0, Math.min(SEATS + STANDING, passengers + change));
-  document.getElementById("count").textContent = countText(passengers);
-  sendUpdate();
-}
+    function countText(n) {
+      return n <= SEATS ? n + " / " + SEATS + " seats" : "Seats full, " + (n - SEATS) + " standing";
+    }
 
-document.getElementById("plus").onclick = () => changeCount(1);
-document.getElementById("minus").onclick = () => changeCount(-1);
-document.getElementById("reset").onclick = () => changeCount(-passengers);
+    function changeCount(change) {
+      passengers = Math.max(0, Math.min(SEATS + STANDING, passengers + change));
+      document.getElementById("count").textContent = countText(passengers);
+      sendUpdate();
+    }
 
-// Sends the current bus info to Firebase
-function sendUpdate() {
-  if (!lastPos) return;   // no location yet, nothing to send
-  set(ref(db, "buses/" + value("bus")), {
-    route: value("route"),
-    direction: value("direction"),
-    passengers: passengers,
-    lat: lastPos.coords.latitude,
-    lng: lastPos.coords.longitude,
-    updated: Date.now()
-  });
-  statusText.textContent = "Sharing: " +
-    lastPos.coords.latitude.toFixed(5) + ", " + lastPos.coords.longitude.toFixed(5);
-}
+    document.getElementById("plus").onclick = () => changeCount(1);
+    document.getElementById("minus").onclick = () => changeCount(-1);
+    document.getElementById("reset").onclick = () => changeCount(-passengers);
 
-document.getElementById("start").onclick = () => {
-  if (watchId !== null) navigator.geolocation.clearWatch(watchId); // stop old tracker first
-  watchId = navigator.geolocation.watchPosition(
-    (pos) => { lastPos = pos; sendUpdate(); },
-    (err) => { statusText.textContent = "Location error: " + err.message; },
-    { enableHighAccuracy: true }
-  );
-};
+    // Sends the current bus info to Firebase
+    function sendUpdate() {
+      if (!lastPos) return;
+      set(ref(db, "buses/" + value("bus")), {
+        route: value("route"),
+        direction: value("direction"),
+        passengers: passengers,
+        lat: lastPos.coords.latitude,
+        lng: lastPos.coords.longitude,
+        updated: Date.now()
+      });
+      statusText.textContent = "Sharing: " +
+        lastPos.coords.latitude.toFixed(5) + ", " + lastPos.coords.longitude.toFixed(5);
+    }
 
-// Changing route or direction updates Firebase immediately
-document.getElementById("route").onchange = sendUpdate;
-document.getElementById("direction").onchange = sendUpdate;
+    document.getElementById("start").onclick = () => {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => { lastPos = pos; sendUpdate(); },
+        (err) => { statusText.textContent = "Location error: " + err.message; },
+        { enableHighAccuracy: true }
+      );
+      clearInterval(heartbeat);                    // NEW
+      heartbeat = setInterval(sendUpdate, 30000);  // NEW: check in every 30s, even when parked
+    };
 
-document.getElementById("stop").onclick = () => {
-  navigator.geolocation.clearWatch(watchId);
-  watchId = null;
-  remove(ref(db, "buses/" + value("bus")));
-  statusText.textContent = "Stopped";
-};
+    document.getElementById("route").onchange = sendUpdate;
+    document.getElementById("direction").onchange = sendUpdate;
+
+    document.getElementById("stop").onclick = () => {
+      clearInterval(heartbeat);   // NEW: stop checking in
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+      remove(ref(db, "buses/" + value("bus")));
+      statusText.textContent = "Stopped";
+    };
   </script>
 </body>
 </html>
