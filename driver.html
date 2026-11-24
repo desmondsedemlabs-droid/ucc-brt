@@ -3,13 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>University of Cape Coast Bus Rapid Transit (BRT) – Driver</title>
+  <title>ShuttleSight – Driver</title>
+  <link rel="icon" href="logo.png">
   <style>
     :root { --red: #c8102e; --blue: #1f3c88; --yellow: #f6c315; --bg: #f4f6fb; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: #222; }
-    header { background: var(--red); color: white; padding: 12px 14px; border-bottom: 5px solid var(--yellow);
-             display: flex; align-items: center; justify-content: center; gap: 12px; text-align: center; }
+    .brand { background: white; text-align: center; padding: 10px 10px 4px; }
+    .brand img { height: 70px; width: auto; }
+    header { background: var(--red); color: white; padding: 10px 16px; border-bottom: 5px solid var(--yellow); text-align: center; }
+    header h1 { margin: 0; font-size: 16px; }
+    header p { margin: 4px 0 0; font-size: 13px; color: var(--yellow); font-weight: bold; }
     .wave { height: 16px; background-color: #ffffff;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='16'%3E%3Cpath d='M0 8 Q10 0 20 8 T40 8' fill='none' stroke='%231f3c88' stroke-width='4'/%3E%3C/svg%3E");
             background-repeat: repeat-x; background-position: center; }
@@ -40,11 +44,10 @@
   </style>
 </head>
 <body>
+  <div class="brand"><img src="logo.png" alt="ShuttleSight"></div>
   <header>
-    <div>
-      <h1>University of Cape Coast<br>Bus Rapid Transit (BRT)</h1>
-      <p>Driver &amp; ticket collector panel</p>
-    </div>
+    <h1>University of Cape Coast Bus Rapid Transit (BRT)</h1>
+    <p>Driver &amp; ticket collector panel</p>
   </header>
   <div class="wave"></div>
 
